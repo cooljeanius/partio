@@ -21,3 +21,8 @@
 /bin
 /CMakeFiles
 Makefile
+*.a
+*.so
+py/partio.py
+src/doc/Doxyfile
+src/py/*_wrap.cxx
