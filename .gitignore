@@ -23,3 +23,6 @@ __pycache__
 workspace.mel
 /dist
 /partio.egg-info
+CMakeFiles/*
+lib*.a
+*.so
