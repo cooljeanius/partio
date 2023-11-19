@@ -1,3 +1,6 @@
+CMakeDoxyfile.in linguist-generated
+DartConfiguration.tcl linguist-generated
+Makefile linguist-generated
 py/partio.py linguist-generated
 src/doc/Doxyfile linguist-generated
 src/doc/Makefile linguist-generated

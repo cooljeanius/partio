@@ -24,5 +24,6 @@ workspace.mel
 /dist
 /partio.egg-info
 CMakeFiles/*
+*/*/CMakeFiles/*
 lib*.a
 *.so
