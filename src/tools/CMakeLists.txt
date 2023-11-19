@@ -31,24 +31,41 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
-include_directories(
-   ${CMAKE_SOURCE_DIR}/src/lib
-)
+include_directories(${CMAKE_SOURCE_DIR}/src/lib)
+link_directories(${CMAKE_BINARY_DIR}/src/lib)
 
-IF(GLUT_FOUND AND OPENGL_FOUND)
-    ADD_EXECUTABLE(partview partview.cpp)
-    target_link_libraries(partview ${PARTIO_LIBRARIES} ${GLUT_LIBRARY} ${OPENGL_LIBRARY})
-    install(TARGETS  partview DESTINATION bin)
-ENDIF(GLUT_FOUND AND OPENGL_FOUND)
+if (GLUT_FOUND AND OPENGL_FOUND)
+    add_executable(partview partview.cpp)
+    target_link_libraries(
+        partview
+        PRIVATE
+        ${PARTIO_LIBRARIES}
+        GLUT::GLUT
+        OpenGL::GLU
+    )
+    if(PARTIO_USE_GLVND)
+        target_link_libraries(partview PRIVATE OpenGL::OpenGL)
+    else()
+        target_link_libraries(partview PRIVATE OpenGL::GL)
+    endif()
+    
+    install(TARGETS partview DESTINATION ${CMAKE_INSTALL_BINDIR})
+endif()
 
-ADD_EXECUTABLE(partinfo partinfo.cpp)
+add_executable(partinfo partinfo.cpp)
 target_link_libraries(partinfo ${PARTIO_LIBRARIES})
 
-ADD_EXECUTABLE(partconv partconv.cpp)
-target_link_libraries(partconv ${PARTIO_LIBRARIES})
+add_executable(partconvert partconvert.cpp)
+target_link_libraries(partconvert ${PARTIO_LIBRARIES})
 
-ADD_EXECUTABLE(partattr partattr.cpp)
+add_executable(partattr partattr.cpp)
 target_link_libraries(partattr ${PARTIO_LIBRARIES})
 
-install(TARGETS partattr partconv partinfo DESTINATION bin)
+install(TARGETS partattr partconvert partinfo DESTINATION ${CMAKE_INSTALL_BINDIR})
 
+install(PROGRAMS partedit.py DESTINATION ${CMAKE_INSTALL_BINDIR} RENAME partedit)
+install(PROGRAMS partjson.py DESTINATION ${CMAKE_INSTALL_BINDIR} RENAME partjson)
+install(PROGRAMS partinspect.py DESTINATION ${CMAKE_INSTALL_BINDIR} RENAME partinspect)
+
+set(PYTHON_DEST "${CMAKE_INSTALL_LIBDIR}/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/site-packages" )
+install(FILES partedit.py partjson.py partinspect.py DESTINATION ${PYTHON_DEST})

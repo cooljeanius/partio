@@ -38,15 +38,9 @@ Modifications from: github user: redpawfx (redpawFX@gmail.com)  and Luma Picture
 
 */
 
-#include "../Partio.h"
 #include "../core/ParticleHeaders.h"
 #include "PartioEndian.h"
-#include "ZIP.h"
-
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <memory>
+#include "io.h"
 
 namespace Partio{
 
@@ -74,18 +68,18 @@ string readName(istream& input){
     return result;
 }
 
-ParticlesDataMutable* readPDC(const char* filename, const bool headersOnly){
+ParticlesDataMutable* readPDC(const char* filename, const bool headersOnly,std::ostream* errorStream){
 
-    auto_ptr<istream> input(Gzip_In(filename,std::ios::in|std::ios::binary));
+    unique_ptr<istream> input(io::unzip(filename));
     if(!*input){
-        std::cerr << "Partio: Unable to open file " << filename << std::endl;
+        if(errorStream) *errorStream  << "Partio: Unable to open file " << filename << std::endl;
         return 0;
     }
 
     PDC_HEADER header;
     input->read((char*)&header, sizeof(header));
     if(PDC_MAGIC != header.magic){
-        std::cerr << "Partio: Magic number '" << header.magic << "' of '" << filename << "' doesn't match pdc magic '" << PDC_MAGIC << "'" << std::endl;
+        if(errorStream) *errorStream << "Partio: Magic number '" << header.magic << "' of '" << filename << "' doesn't match pdc magic '" << PDC_MAGIC << "'" << std::endl;
         return 0;
     }
 
@@ -127,14 +121,10 @@ ParticlesDataMutable* readPDC(const char* filename, const bool headersOnly){
     return simple;
 }
 
-bool writePDC(const char* filename,const ParticlesData& p,const bool compressed){
-    auto_ptr<ostream> output(
-        compressed ?
-        Gzip_Out(filename,ios::out|ios::binary)
-        :new std::ofstream(filename,ios::out|ios::binary));
-
+bool writePDC(const char* filename,const ParticlesData& p,const bool compressed,std::ostream* errorStream){
+    unique_ptr<ostream> output(io::write(filename, compressed));
     if(!*output){
-        cerr << "Partio Unable to open file " << filename << endl;
+        if(errorStream) *errorStream << "Partio Unable to open file " << filename << endl;
         return false;
     }
 

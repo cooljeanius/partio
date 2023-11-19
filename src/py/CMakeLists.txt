@@ -31,37 +31,31 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
+find_package(SWIG)
+if (SWIG_FOUND)
+include(${SWIG_USE_FILE})
 
+set_source_files_properties(partio.i PROPERTIES CPLUSPLUS ON)
+set_source_files_properties(partio.i PROPERTIES SWIG_FLAGS "-includeall")
 
-FIND_PACKAGE(SWIG)
-IF(SWIG_FOUND) 
-FIND_PACKAGE(PythonLibs)
-IF(PYTHONLIBS_FOUND)
+swig_add_library(partio_mod LANGUAGE python SOURCES partio.i)
+# We already have a target called "partio" so we call the python module
+# "partio_mod" and set the output name so that we get _partio.so.
+set_target_properties(partio_mod PROPERTIES OUTPUT_NAME partio)
+get_property(swig_files TARGET partio_mod PROPERTY SWIG_SUPPORT_FILES)
 
-INCLUDE(${SWIG_USE_FILE})
+target_include_directories(
+    partio_mod
+    PRIVATE
+        ${PYTHON_INCLUDE_DIRS}
+        ${CMAKE_SOURCE_DIR}/src/lib
+)
+target_link_libraries(partio_mod PRIVATE ${PYTHON_LIBRARIES} partio)
 
-EXECUTE_PROCESS( COMMAND python -c "import sys;print"%s.%s"%sys.version_info[0:2]" OUTPUT_VARIABLE PYTHON_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE)
+set(PYTHON_DEST "${CMAKE_INSTALL_LIBDIR}/python${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}/site-packages" )
 
+install(TARGETS partio_mod DESTINATION ${PYTHON_DEST})
+install(FILES partio.i DESTINATION ${CMAKE_INSTALL_DATADIR}/swig)
+install(FILES ${swig_files} DESTINATION ${PYTHON_DEST})
 
-INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_PATH})
-
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
-
-SET(CMAKE_SWIG_FLAGS "")
-
-# setup output path
-SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/py)
-SET(CMAKE_SWIG_OUTDIR ${PROJECT_BINARY_DIR}/py)
-
-SET_SOURCE_FILES_PROPERTIES(partio.i PROPERTIES CPLUSPLUS ON)
-SET_SOURCE_FILES_PROPERTIES(partio.i PROPERTIES SWIG_FLAGS "-includeall")
-SWIG_ADD_MODULE(partio python partio.i)
-SWIG_LINK_LIBRARIES(partio ${PYTHON_LIBRARIES} ${ZLIB_LIBRARY} partio)
-
-SET(PYTHON_DEST "lib64/python${PYTHON_VERSION}/site-packages" )
-INSTALL(TARGETS _partio DESTINATION ${PYTHON_DEST})
-INSTALL(FILES ${CMAKE_BINARY_DIR}/${outdir}/src/py/partio.py  DESTINATION ${PYTHON_DEST})
-
-ENDIF(PYTHONLIBS_FOUND)
-ENDIF(SWIG_FOUND)
-
+endif(SWIG_FOUND)

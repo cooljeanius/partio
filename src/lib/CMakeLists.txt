@@ -31,11 +31,31 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
-FILE(GLOB io_cpp "io/*.cpp")
-FILE(GLOB core_cpp "core/*.cpp")
-ADD_LIBRARY (partio ${io_cpp} ${core_cpp})
+file(GLOB io_cpp "io/*.cpp")
+file(GLOB core_cpp "core/*.cpp")
 
-FILE(GLOB public_includes "*.h")
+if(PARTIO_BUILD_SHARED_LIBS)
+    set(PARTIO_LIBRARY_TYPE SHARED)
+else()
+    set(PARTIO_LIBRARY_TYPE STATIC)
+endif()
 
-INSTALL (TARGETS partio DESTINATION lib)
-INSTALL (FILES ${public_includes} DESTINATION include)
+add_library(partio ${PARTIO_LIBRARY_TYPE} ${io_cpp} ${core_cpp})
+set_target_properties(partio PROPERTIES
+    OUTPUT_NAME partio
+    POSITION_INDEPENDENT_CODE ON
+    SOVERSION ${PARTIO_VERSION_MAJOR})
+
+target_include_directories(partio
+    PUBLIC
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+
+if (ZLIB_FOUND)
+    target_link_libraries(partio PUBLIC ZLIB::ZLIB)
+endif()
+
+install(TARGETS partio DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+file(GLOB public_includes "*.h")
+install(FILES ${public_includes} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

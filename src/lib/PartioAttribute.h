@@ -90,23 +90,50 @@ std::string TypeName(ParticleAttributeType attrType);
 //!  Particle Collection Interface
 /*!
   This class provides a handle and description of an attribute. This includes
-  what type the primitive is, how many instances of the primitive there, name of
+  what type the primitive is, the number of entries, the name of
   the attribute and an index which speeds lookups of data
 */
 class ParticleAttribute
 {
 public:
     //! Type of attribute
-    ParticleAttributeType type;
+    ParticleAttributeType type{NONE};
 
     //! Number of entries, should be 3 if type is VECTOR
-    int count;
+    int count{0};
 
     //! Name of attribute
     std::string name;
 
     //! Internal method of fast access, user should not use or change
-    int attributeIndex;
+    int attributeIndex{-1};
+
+    //! Comment used by various data/readers for extra attribute information
+    //! for example for a PTC file to read and write this could be "color" or "point"
+    // std::string comment;
+};
+
+// Fixed Attribute Specifier
+//!  Fixed Attribute Interface
+/*!
+  This class provides a handle and description of an attribute. This includes
+  what type the primitive is, the number of entries, the name of
+  the attribute and an index which speeds lookups of data
+*/
+class FixedAttribute
+{
+public:
+    //! Type of attribute
+    ParticleAttributeType type{NONE};
+
+    //! Number of entries, should be 3 if type is VECTOR
+    int count{0};
+
+    //! Name of attribute
+    std::string name;
+
+    //! Internal method of fast access, user should not use or change
+    int attributeIndex{-1};
 
     //! Comment used by various data/readers for extra attribute information
     //! for example for a PTC file to read and write this could be "color" or "point"
