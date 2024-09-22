@@ -245,7 +245,7 @@ ParticlesDataMutable* readBGEO(const char* filename,const bool headersOnly,std::
     getAttributes(particleSize, attrOffsets, attrHandles, accessors, nPointAttrib, input.get(), simple, headersOnly, errorStream);
 
     if(headersOnly) {
-        skip(input.get(),nPoints*particleSize*sizeof(int));
+        skip(input.get(),static_cast<unsigned long>(nPoints) * particleSize * sizeof(int));
     } else {
         // Read the points
         int *buffer=new int[particleSize];
