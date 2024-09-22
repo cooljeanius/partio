@@ -222,12 +222,12 @@ public:
     template<class T> inline void set(const ParticleAttribute& attribute,
                                       const ParticleIndex particleIndex, const T* data) {
         T* ptr = static_cast<T*>(dataInternal(attribute, particleIndex));
-        if (ptr) memcpy(ptr, data, attribute.count * TypeSize(attribute.type));
+        if (ptr) memcpy(ptr, data, static_cast<size_t>(attribute.count) * TypeSize(attribute.type));
     }
 
     template<class T> inline void setFixed(const FixedAttribute& attribute, const T* data) {
         T* ptr = static_cast<T*>(fixedDataInternal(attribute));
-        memcpy(ptr, data, attribute.count * TypeSize(attribute.type));
+        memcpy(ptr, data, static_cast<size_t>(attribute.count) * TypeSize(attribute.type));
     }
 
     /// Returns a token for the given string. This allows efficient storage of string data
