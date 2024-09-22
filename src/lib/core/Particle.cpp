@@ -127,7 +127,7 @@ clone(const ParticlesData& other, bool particles, const std::map<std::string, st
         // Copy fixed data
         const void* src = other.fixedData<void>(srcFixedAttr);
         void* dst = p->fixedDataWrite<void>(dstFixedAttr);
-        size_t size = Partio::TypeSize(dstFixedAttr.type) * dstFixedAttr.count;
+        size_t size = static_cast<size_t>(Partio::TypeSize(dstFixedAttr.type)) * dstFixedAttr.count;
         std::memcpy(dst, src, size);
     }
     if (!particles) {
