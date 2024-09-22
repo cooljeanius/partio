@@ -152,7 +152,7 @@ clone(const ParticlesData& other, bool particles, const std::map<std::string, st
                 p->registerIndexedStr(dstAttr, values[m].c_str());
             }
         }
-        size_t size = Partio::TypeSize(srcAttr.type) * srcAttr.count;
+        size_t size = static_cast<size_t>(Partio::TypeSize(srcAttr.type)) * srcAttr.count;
 
         for (Partio::ParticleIndex j = 0; j < numParticles; ++j) {
             const void *src = other.data<void>(srcAttr, j);
