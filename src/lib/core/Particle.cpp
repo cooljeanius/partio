@@ -596,7 +596,7 @@ void merge(ParticlesDataMutable& base, const ParticlesData& delta, const std::st
 
         // Copy the attributes to the new/overridden particle
         for (const AttributePair<ParticleAttribute>& attr : attrs) {
-            size_t size = Partio::TypeSize(attr.base.type) * attr.base.count;
+            size_t size = static_cast<size_t>(Partio::TypeSize(attr.base.type)) * attr.base.count;
             void *dst = base.dataWrite<void>(attr.base, index);
             const void* src;
             std::unique_ptr<int[]> newIndices;
