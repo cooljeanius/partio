@@ -23,17 +23,20 @@ Supported FLAGS:
 # - delete fixed attribute
 # - rename fixed attribute
 
-import os, sys, math
-import partio
+import math
+import os
+import sys
 
 # pylint:disable=E0611,E0401
-from Qt.QtGui import QKeySequence, QIcon, QIntValidator, QDoubleValidator
+from Qt.QtGui import QKeySequence, QIcon, QIntValidator, QDoubleValidator, QFontMetrics
 from Qt.QtWidgets import QShortcut, QApplication, QMainWindow, \
     QPushButton, QTableWidget, QLabel, QWidget, QVBoxLayout, QHeaderView,\
     QHBoxLayout, QLineEdit, QFileDialog, QFrame, QDialog, QFormLayout, \
-    QComboBox, QCheckBox, QTableWidgetItem, QSplitter
-from Qt.QtCore import Qt, QSize, QObject#, pyqtSignal
-from PyQt5.QtCore import pyqtSignal
+    QComboBox, QCheckBox, QTableWidgetItem, QSplitter, QSizePolicy
+from Qt.QtCore import Qt, QSize, QObject, Signal
+
+import partio
+
 
 #------------------------------------------------------------------------------_
 _attrTypes = [partio.NONE, partio.VECTOR, partio.FLOAT, partio.INT, partio.INDEXEDSTR]
@@ -107,11 +110,11 @@ def copyParticles(src, dst):
 class ParticleData(QObject):
     """ UI Controller class for partio data """
 
-    particleAdded = pyqtSignal(int)
-    attributeAdded = pyqtSignal(str)
-    fixedAttributeAdded = pyqtSignal(str)
-    dataReset = pyqtSignal()
-    dirtied = pyqtSignal(bool)
+    particleAdded = Signal(int)
+    attributeAdded = Signal(str)
+    fixedAttributeAdded = Signal(str)
+    dataReset = Signal()
+    dirtied = Signal(bool)
 
     def __init__(self):
         QObject.__init__(self)
@@ -149,6 +152,7 @@ class ParticleData(QObject):
         self.attributeInfo = self.data.attributeInfo
         self.fixedAttributeInfo = self.data.fixedAttributeInfo
         self.indexedStrs = self.data.indexedStrs
+        self.fixedIndexedStrs = self.data.fixedIndexedStrs
 
     #--------------------------------------------------------------------------
     def set(self, *args):
@@ -397,10 +401,20 @@ class NumericalEdit(QLineEdit): # pylint:disable=R0903
     def __init__(self, value, parent=None):
         QLineEdit.__init__(self, str(value), parent)
         self.setAlignment(Qt.AlignRight)
+        self.setMinimumWidth(50)
+        self.setCursorPosition(0)
         if isinstance(value, int):
             self.setValidator(QIntValidator())
         elif isinstance(value, float):
             self.setValidator(QDoubleValidator())
+
+    def sizeHint(self):
+        hint = super().sizeHint()
+        fm = QFontMetrics(self.font())
+        stringWidth = fm.width(self.text() + '00')  # add a couple characters for padding
+        hint.setWidth(stringWidth)
+        return hint
+
 
 #------------------------------------------------------------------------------
 class AttrWidget(QFrame): # pylint:disable=R0903
@@ -425,12 +439,16 @@ class AttrWidget(QFrame): # pylint:disable=R0903
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0,0,0,0)
+        layout.setSpacing(0)
         self.setLayout(layout)
 
         idx = 0
         self.items = []
         self.textValues = []
-        numRows = int(math.ceil(len(value) / float(numColumns)))
+        if numColumns:
+            numRows = int(math.ceil(len(value) / float(numColumns)))
+        else:
+            numRows = 0
         for _ in range(numRows):
             row = QHBoxLayout()
             layout.addLayout(row)
@@ -730,14 +748,18 @@ class FixedAttributesWidget(QWidget):
 
 class IndexedStringsWidget(QWidget):
     """ Holds the list of indexed string attributes """
-    def __init__(self, data, parent=None):
+    def __init__(self, data, fixedAttrs=False, parent=None):
         QWidget.__init__(self, parent)
         self.data = data
 
         vbox = QVBoxLayout()
         self.setLayout(vbox)
-        title = QLabel('Indexed Strings')
+        if fixedAttrs:
+            title = QLabel('Fixed Attribute Indexed Strings')
+        else:
+            title = QLabel('Indexed Strings')
         vbox.addWidget(title)
+        self.fixedAttrs = fixedAttrs
 
         self.frame = QFrame()
         vbox.addWidget(self.frame)
@@ -754,18 +776,32 @@ class IndexedStringsWidget(QWidget):
         self.noStringsLabel = QLabel('<i>No indexed strings</i>')
         self.vbox.addWidget(self.noStringsLabel)
 
-        self.widgets = []
         self.populate()
 
-        self.data.attributeAdded.connect(self.attributeAddedSlot)
         self.data.dataReset.connect(self.dataResetSlot)
-        self.data.dirtied.connect(self.dataDirtiedSlot)
 
-    def dataDirtiedSlot(self, dirty):
-        """ SLOT when the particle data is dirtied or cleaned."""
-        if not dirty:
-            for widget in self.widgets:
-                widget.drawBorder(False)
+        if fixedAttrs:
+            self.data.fixedAttributeAdded.connect(self.attributeAddedSlot)
+        else:
+            self.data.attributeAdded.connect(self.attributeAddedSlot)
+
+    def getAttributeNum(self):
+        if self.fixedAttrs:
+            return self.data.numFixedAttributes()
+        else:
+            return self.data.numAttributes()
+
+    def getAttributeInfo(self, name):
+        if self.fixedAttrs:
+            return self.data.fixedAttributeInfo(name)
+        else:
+            return self.data.attributeInfo(name)
+
+    def getIndextedStrs(self, attr):
+        if self.fixedAttrs:
+            return self.data.fixedIndexedStrs(attr)
+        else:
+            return self.data.indexedStrs(attr)
 
     def dataResetSlot(self):
         """ SLOT when particle data is reconstructed """
@@ -773,19 +809,16 @@ class IndexedStringsWidget(QWidget):
 
     def attributeAddedSlot(self, name): #pylint:disable=W0613
         """ SLOT when an attribute is added to the particle set """
-        attr = self.data.attributeInfo(name)
+        attr = self.getAttributeInfo(name)
         if attr.type == partio.INDEXEDSTR:
             self.populate()
 
     def populate(self):
         """ Populates the table of indexed strings """
 
-        self.widgets = []
-
-        # If no widgets, just drop that in
         attrs = []
-        for anum in range(self.data.numAttributes()):
-            attr = self.data.attributeInfo(anum)
+        for anum in range(self.getAttributeNum()):
+            attr = self.getAttributeInfo(anum)
             if attr.type == partio.INDEXEDSTR:
                 attrs.append(attr)
 
@@ -802,23 +835,35 @@ class IndexedStringsWidget(QWidget):
         for row, attr in enumerate(attrs):
             item = QTableWidgetItem(attr.name)
             self.table.setVerticalHeaderItem(row, item)
-            strings = self.data.indexedStrs(attr)
+            strings = self.getIndextedStrs(attr)
+            cell_widget = QWidget()
+            layout = QVBoxLayout()
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(0)
+            cell_widget.setLayout(layout)
             table = QTableWidget()
             table.setColumnCount(1)
+            table.setMinimumWidth(100)
             table.setRowCount(len(strings))
             table.horizontalHeader().hide()
             table.setVerticalHeaderLabels([str(i) for i in range(len(strings))])
             for i, string in enumerate(strings):
-                widget = QLabel(string)
-                table.setCellWidget(i, 0, widget)
-                self.widgets.append(widget)
-            self.table.setCellWidget(row, 0, table)
+                item = QTableWidgetItem(string)
+                table.setItem(i, 0, item)
+            table.setFixedHeight(len(strings) * 33)
+            table.setWordWrap(False)
+            table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            table.horizontalHeader().setStretchLastSection(True)
+            table.horizontalHeader().resizeSections(QHeaderView.ResizeToContents)
+            layout.addWidget(table)
+            self.table.setCellWidget(row, 0, cell_widget)
 
-        self.table.horizontalHeader().setStretchLastSection(False)
-        self.table.setTabKeyNavigation(True)
+        self.table.horizontalHeader().setStretchLastSection(True)
         self.table.horizontalHeader().setSectionsMovable(False)
+        self.table.setTabKeyNavigation(True)
 
         self.table.horizontalHeader().resizeSections(QHeaderView.ResizeToContents)
+        self.table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.table.verticalHeader().resizeSections(QHeaderView.ResizeToContents)
 
 #------------------------------------------------------------------------------
@@ -881,6 +926,7 @@ class PartEdit(QMainWindow):
 
         particleTable = ParticleTableWidget(self.data, self)
         splitter.addWidget(particleTable)
+        particleTable.resize(900, particleTable.height())
 
         right = QWidget(self)
         splitter.addWidget(right)
@@ -890,10 +936,11 @@ class PartEdit(QMainWindow):
         fixedAttrWidget = FixedAttributesWidget(self.data, self)
         vbox.addWidget(fixedAttrWidget)
 
-        indexedStrings = IndexedStringsWidget(self.data, self)
-        vbox.addWidget(indexedStrings)
+        fixedIndexedStrings = IndexedStringsWidget(self.data, fixedAttrs=True, parent=self)
+        vbox.addWidget(fixedIndexedStrings)
 
-        vbox.addStretch()
+        indexedStrings = IndexedStringsWidget(self.data, fixedAttrs=False, parent=self)
+        vbox.addWidget(indexedStrings)
 
         # TODD: SCROLLABLE AREAS FOR EVERYTHING
 
@@ -1022,6 +1069,7 @@ class PartEdit(QMainWindow):
                 value = values[i]
             else:
                 value = values[-1]
+                values.append(value)
             if attrType == partio.INT or attrType == partio.INDEXEDSTR:
                 values[i] = int(value)
             elif attrType == partio.FLOAT or attrType == partio.VECTOR:
@@ -1035,8 +1083,7 @@ class PartEdit(QMainWindow):
     #--------------------------------------------------------------------------
     def dataDirtiedSlot(self, dirty):
         """ Sets the window title with or without "*" for dirty state """
-
-        title = self.data.filename
+        title = self.data.filename or ''
         if dirty:
             title += '*'
         self.setWindowTitle(title)
@@ -1068,6 +1115,7 @@ def main():
     app = QApplication([])
     styleAppWidgets()
     window = PartEdit()
+    window.resize(1400, 900)
 
     # Open file if provided
     if filename:

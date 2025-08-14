@@ -399,7 +399,10 @@ protected:
     {if(pptr() && pptr()>pbase()) return process(false);return 0;}
 
     virtual int underflow()
-    {std::runtime_error("Attempt to read write only ostream");return 0;}
+    {
+        std::cerr << "error: Partio::ZipStreambufCompress attempted to read a write-only ostream" << std::endl;
+        return 0;
+    }
 
     virtual int overflow(int c=EOF)
     {if(c!=EOF){*pptr()=static_cast<char>(c);pbump(1);}
@@ -517,9 +520,9 @@ Find_And_Read_Central_Header()
     unsigned int read_size_before_comment=22;
     std::streamoff read_start=max_comment_size+read_size_before_comment;
     if(read_start>end_position) read_start=end_position;
+    if(read_start<=0){std::cerr<<"ZIP: Invalid read buffer size"<<std::endl;return false;}
     istream.seekg(end_position-read_start);
     char *buf=new char[static_cast<unsigned int>(read_start)];
-    if(read_start<=0){std::cerr<<"ZIP: Invalid read buffer size"<<std::endl;return false;}
     istream.read(buf,read_start);
     int found=-1;
     for(unsigned int i=0;i<read_start-3;i++){
