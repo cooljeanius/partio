@@ -17,7 +17,7 @@ jobs:
     runs-on: ${{matrix.os}}-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Install dependencies
       run: |
         sudo apt update
@@ -37,11 +37,11 @@ jobs:
       matrix:
         architecture: [x64]
         config: [Release]
-        standard: [c++11, c++14, c++17, c++20]
+        standard: [c++17, c++20]
     name: windows-${{matrix.architecture}}-${{matrix.config}}-${{matrix.standard}}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Get ZLIB
       run: vcpkg install zlib:${{matrix.architecture}}-windows
     - name: Get GLUT
