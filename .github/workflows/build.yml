@@ -37,7 +37,7 @@ jobs:
       matrix:
         architecture: [x64]
         config: [Release]
-        standard: [c++11, c++14, c++17, c++20]
+        standard: [c++17, c++20]
     name: windows-${{matrix.architecture}}-${{matrix.config}}-${{matrix.standard}}
 
     steps:
