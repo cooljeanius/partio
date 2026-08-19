@@ -1,6 +1,9 @@
 ---
 name: C/C++ CI
 
+permissions:
+  contents: read
+
 on:
   push:
   pull_request:
@@ -17,7 +20,7 @@ jobs:
     runs-on: ${{matrix.os}}-latest
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: Install dependencies
       run: |
         sudo apt update
@@ -41,7 +44,7 @@ jobs:
     name: windows-${{matrix.architecture}}-${{matrix.config}}-${{matrix.standard}}
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - name: Get ZLIB
       run: vcpkg install zlib:${{matrix.architecture}}-windows
     - name: Get GLUT
