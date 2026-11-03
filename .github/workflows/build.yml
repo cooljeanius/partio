@@ -15,7 +15,8 @@ jobs:
       matrix:
         os: [ubuntu]
         config: [Debug, Release]
-        standard: [c++14, c++17, c++20]
+        standard: [c++17, c++20]
+      fail-fast: false
     name: ${{matrix.os}}-${{matrix.config}}-${{matrix.standard}}
     runs-on: ${{matrix.os}}-latest
 
